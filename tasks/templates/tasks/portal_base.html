@@ -25,7 +25,16 @@
           <span class="portal-nav__divider" aria-hidden="true"></span>
           {% if user.is_authenticated %}
             <span class="portal-nav__user">{{ user.username }}</span>
-            <a class="portal-nav__link portal-nav__link--ghost" href="{% url 'tasks:logout' %}">退出</a>
+            <form method="post" action="{% url 'tasks:logout' %}" style="display: inline">
+              {% csrf_token %}
+              <button
+                type="submit"
+                class="portal-nav__link portal-nav__link--ghost"
+                style="background: none; border: 0; padding: 0; cursor: pointer"
+              >
+                退出
+              </button>
+            </form>
           {% else %}
             <a class="portal-nav__link portal-nav__link--accent" href="{% url 'tasks:login' %}">登录</a>
             <a class="portal-nav__link portal-nav__link--ghost" href="{% url 'tasks:register' %}">注册</a>
