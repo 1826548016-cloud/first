@@ -1,0 +1,49 @@
+{% extends 'tasks/base.html' %}
+{% block title %}四级训练统计 - 任务管理系统{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1 class="h1">四级训练统计</h1>
+      <p class="muted">按天统计听力 / 阅读 / 翻译 / 作文训练时长（分钟）趋势。</p>
+    </div>
+    <div class="actions">
+      <a class="btn btn-ghost" href="{% url 'tasks:cet4_list' %}">返回训练列表</a>
+      <a class="btn btn-primary" href="{% url 'tasks:cet4_create' %}">+ 添加训练记录</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__title">每日训练时长统计（分钟）</div>
+    <div style="overflow-x: auto;">
+      <table class="table" style="width: 100%;">
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>{{ cet4_stats_payload.category_labels.listening }}</th>
+            <th>{{ cet4_stats_payload.category_labels.reading }}</th>
+            <th>{{ cet4_stats_payload.category_labels.translation }}</th>
+            <th>{{ cet4_stats_payload.category_labels.writing }}</th>
+            <th>合计</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in cet4_stats_payload.rows %}
+            <tr>
+              <td>{{ row.date }}</td>
+              <td>{{ row.listening }}</td>
+              <td>{{ row.reading }}</td>
+              <td>{{ row.translation }}</td>
+              <td>{{ row.writing }}</td>
+              <td>{{ row.total }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="muted">暂无训练数据</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

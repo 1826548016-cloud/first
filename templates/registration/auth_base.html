@@ -1,0 +1,12 @@
+{% extends "tasks/base.html" %}
+{% block topbar_slogan %}{% endblock %}
+{% block footer_slogan %}{% endblock %}
+{% block main_class %}auth-main{% endblock %}
+
+{% block content %}
+  <div class="auth-apple">
+    <div class="auth-apple__panel">
+      {% block auth_inner %}{% endblock %}
+    </div>
+  </div>
+{% endblock %}

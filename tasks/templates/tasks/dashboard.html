@@ -1,0 +1,268 @@
+{% extends 'tasks/base.html' %}
+{% load static %}
+{% block title %}学习看板 - 任务管理系统{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1 class="h1">学习看板</h1>
+    </div>
+    <div class="actions">
+      <a class="btn btn-ghost" href="{% url 'tasks:home' %}">返回首页</a>
+      <a class="btn btn-ghost" href="{% url 'tasks:topic_list' %}">管理专题</a>
+    </div>
+  </div>
+
+  <div class="card dash-controls">
+    <div class="dash-controls__head">
+      <div class="card__title" style="padding:0;">时间维度</div>
+      <div class="muted dash-controls__hint">趋势图支持拖动缩放与滚动图例</div>
+    </div>
+    <div class="dash-controls__rows">
+      <div class="segmented" role="tablist" aria-label="时间维度">
+        <a class="segmented__btn {% if period == 'day' %}is-active{% endif %}" href="{% url 'tasks:dashboard' %}?period=day&include_topics={% if include_topics %}1{% else %}0{% endif %}">每天</a>
+        <a class="segmented__btn {% if period == 'week' %}is-active{% endif %}" href="{% url 'tasks:dashboard' %}?period=week&include_topics={% if include_topics %}1{% else %}0{% endif %}">每周</a>
+        <a class="segmented__btn {% if period == 'month' %}is-active{% endif %}" href="{% url 'tasks:dashboard' %}?period=month&include_topics={% if include_topics %}1{% else %}0{% endif %}">每月</a>
+        <a class="segmented__btn {% if period == 'year' %}is-active{% endif %}" href="{% url 'tasks:dashboard' %}?period=year&include_topics={% if include_topics %}1{% else %}0{% endif %}">每年</a>
+      </div>
+
+      <div class="segmented" role="tablist" aria-label="数据范围">
+        <a class="segmented__btn {% if include_topics %}is-active{% endif %}" href="{% url 'tasks:dashboard' %}?period={{ period }}&include_topics=1">任务 + 专题</a>
+        <a class="segmented__btn {% if not include_topics %}is-active{% endif %}" href="{% url 'tasks:dashboard' %}?period={{ period }}&include_topics=0">仅任务</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-3" style="margin-bottom: 14px;">
+    <div class="card metric">
+      <div class="metric__label">周期总时长</div>
+      <div class="metric__value">{{ kpi_total_minutes }}</div>
+      <div class="muted">分钟</div>
+    </div>
+    <div class="card metric">
+      <div class="metric__label">今日时长</div>
+      <div class="metric__value">{{ kpi_today_minutes }}</div>
+      <div class="muted">分钟</div>
+    </div>
+    <div class="card metric">
+      <div class="metric__label">活跃天数 / 峰值</div>
+      <div class="metric__value">{{ kpi_active_days }}</div>
+      <div class="muted">{{ kpi_peak_bucket }} · {{ kpi_peak_minutes }} 分钟</div>
+    </div>
+  </div>
+
+  <div class="grid grid-2 dash-grid-vertical">
+    <div class="card dash-card">
+      <div class="dash-card__head">
+        <div class="card__title" style="padding:0;">堆叠趋势图（分钟）</div>
+        <div class="dash-card__meta muted">
+          拖动框选缩放 · 图例可滚动
+        </div>
+      </div>
+      <div id="chart" class="chart"></div>
+    </div>
+    <div class="card dash-card">
+      <div class="dash-card__head">
+        <div class="card__title" style="padding:0;">专题占比</div>
+        <div class="dash-card__meta muted" id="breakdownMeta"></div>
+      </div>
+      <div id="breakdown" class="chart dash-chart--compact"></div>
+      <div id="breakdownList" class="dash-breakdown-list" aria-label="专题占比列表"></div>
+      <hr class="dash-sep" />
+      <div class="card__title">添加今日记录</div>
+      <form method="post" action="{% url 'tasks:time_entry_create' %}?period={{ period }}&include_topics={% if include_topics %}1{% else %}0{% endif %}">
+        {% csrf_token %}
+        <div class="field">
+          <label class="label">专题</label>
+          {{ add_form.topic }}
+        </div>
+        <div class="field">
+          <label class="label">日期</label>
+          {{ add_form.entry_date }}
+        </div>
+        <div class="field">
+          <label class="label">分钟</label>
+          {{ add_form.minutes }}
+        </div>
+        <div class="field">
+          <label class="label">备注</label>
+          {{ add_form.note }}
+        </div>
+        {% if add_form.non_field_errors %}
+          <div class="alert alert-danger" style="margin-top:10px;">{{ add_form.non_field_errors }}</div>
+        {% endif %}
+        <div class="field field--actions" style="margin-top:10px;">
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {{ x|json_script:"dash-x" }}
+  {{ series|json_script:"dash-series" }}
+  {{ breakdown|json_script:"dash-breakdown" }}
+{% endblock %}
+
+{% block scripts %}
+  <script src="{% static 'echarts.min.js' %}"></script>
+  <script>
+    (function () {
+      if (typeof echarts === "undefined") {
+        console.error("ECharts not loaded");
+        return;
+      }
+      const x = JSON.parse(document.getElementById("dash-x").textContent || "[]");
+      const series = JSON.parse(document.getElementById("dash-series").textContent || "[]");
+      const breakdown = JSON.parse(document.getElementById("dash-breakdown").textContent || "[]");
+
+      const el = document.getElementById("chart");
+      const chart = echarts.init(el);
+
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      const ink = isDark ? "rgba(255,255,255,0.92)" : "#1d1d1f";
+      const inkSub = isDark ? "rgba(255,255,255,0.55)" : "#6e6e73";
+      const line = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)";
+      const tipBg = isDark ? "rgba(22, 26, 42, 0.96)" : "rgba(255,255,255,0.94)";
+      const tipBd = isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)";
+
+      const totals = x.map((_, idx) => {
+        let t = 0;
+        for (const s of series) t += Number((s.data || [])[idx] || 0);
+        return t;
+      });
+      const totalAll = totals.reduce((a, b) => a + b, 0);
+
+      chart.setOption({
+        backgroundColor: "transparent",
+        textStyle: { color: ink },
+        tooltip: {
+          trigger: "axis",
+          backgroundColor: tipBg,
+          borderColor: tipBd,
+          textStyle: { color: ink },
+          axisPointer: { type: "line" },
+          formatter: function (items) {
+            const rows = Array.isArray(items) ? items : [items];
+            if (!rows.length) return "";
+            const idx = rows[0].dataIndex ?? 0;
+            const sum = totals[idx] || 0;
+            const head = `<div style="font-weight:700;margin-bottom:6px;">${rows[0].axisValueLabel || ""} · 总计 ${sum} 分钟</div>`;
+            const body = rows
+              .filter((r) => Number(r.data || 0) > 0)
+              .sort((a, b) => Number(b.data || 0) - Number(a.data || 0))
+              .slice(0, 10)
+              .map((r) => `<div style="display:flex;justify-content:space-between;gap:12px;"><span>${r.marker}${r.seriesName}</span><span style="font-family:var(--font-mono);">${r.data}</span></div>`)
+              .join("");
+            const tail = rows.length > 10 ? `<div style="margin-top:6px;color:${inkSub};">仅展示前 10 个</div>` : "";
+            return head + body + tail;
+          },
+        },
+        legend: { top: 6, type: "scroll", textStyle: { color: inkSub } },
+        grid: { left: 52, right: 16, top: 54, bottom: 64 },
+        dataZoom: [
+          { type: "inside", xAxisIndex: 0, filterMode: "none" },
+          { type: "slider", xAxisIndex: 0, height: 18, bottom: 14, borderColor: "transparent", backgroundColor: "transparent", fillerColor: isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.06)" },
+        ],
+        xAxis: { type: "category", data: x, axisLine: { lineStyle: { color: line } }, axisLabel: { color: inkSub }, axisTick: { show: false } },
+        yAxis: { type: "value", name: "分钟", nameTextStyle: { color: inkSub }, splitLine: { lineStyle: { color: line } }, axisLabel: { color: inkSub } },
+        series: [
+          ...series.map((s) => ({
+            name: s.name,
+            type: "line",
+            stack: "total",
+            smooth: true,
+            symbol: "circle",
+            symbolSize: 6,
+            data: s.data,
+            areaStyle: { opacity: 0.18 },
+            lineStyle: { width: 2.2 },
+            emphasis: { focus: "series" },
+          })),
+          {
+            name: "总计",
+            type: "line",
+            data: totals,
+            smooth: true,
+            symbol: "none",
+            lineStyle: { width: 1.2, type: "dashed", opacity: 0.7, color: inkSub },
+            tooltip: { show: false },
+            z: 1,
+          },
+        ],
+      });
+
+      const pieEl = document.getElementById("breakdown");
+      const pie = echarts.init(pieEl);
+
+      const breakdownSorted = (breakdown || []).slice().sort((a, b) => Number(b.value || 0) - Number(a.value || 0));
+      const breakdownTotal = breakdownSorted.reduce((a, b) => a + Number(b.value || 0), 0);
+      const metaEl = document.getElementById("breakdownMeta");
+      if (metaEl) {
+        metaEl.textContent = breakdownTotal ? `总计 ${breakdownTotal} 分钟` : "暂无数据";
+      }
+
+      pie.setOption({
+        backgroundColor: "transparent",
+        textStyle: { color: ink },
+        tooltip: { trigger: "item", backgroundColor: tipBg, borderColor: tipBd, textStyle: { color: ink } },
+        legend: { bottom: 0, type: "scroll", textStyle: { color: inkSub } },
+        series: [{
+          type: "pie",
+          radius: ["46%", "72%"],
+          center: ["50%", "42%"],
+          label: { color: inkSub, formatter: "{b}\n{d}%" },
+          data: breakdownSorted,
+          emphasis: { scale: true, scaleSize: 6 },
+        }],
+        graphic: breakdownTotal ? [{
+          type: "text",
+          left: "center",
+          top: "40%",
+          style: {
+            text: `${breakdownTotal}\n分钟`,
+            fill: ink,
+            fontSize: 14,
+            fontWeight: 700,
+            fontFamily: "var(--font-mono)",
+            lineHeight: 18,
+            align: "center",
+          },
+        }] : [],
+      });
+
+      const listEl = document.getElementById("breakdownList");
+      if (listEl) {
+        const max = breakdownSorted.length ? Number(breakdownSorted[0].value || 0) : 0;
+        if (!breakdownSorted.length) {
+          listEl.innerHTML = `<div class="dash-breakdown-empty">暂无占比数据（先添加学习记录）</div>`;
+        } else {
+          listEl.innerHTML = breakdownSorted.slice(0, 8).map((row) => {
+            const v = Number(row.value || 0);
+            const pct = breakdownTotal ? Math.round((v / breakdownTotal) * 100) : 0;
+            const w = max ? Math.round((v / max) * 100) : 0;
+            const name = String(row.name || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            return `
+              <div class="dash-breakdown-row">
+                <div class="dash-breakdown-main">
+                  <div class="dash-breakdown-name">${name}</div>
+                  <div class="dash-breakdown-bar"><span style="width:${w}%"></span></div>
+                </div>
+                <div class="dash-breakdown-meta">
+                  <div class="dash-breakdown-min">${v}</div>
+                  <div class="dash-breakdown-pct">${pct}%</div>
+                </div>
+              </div>
+            `;
+          }).join("");
+          if (breakdownSorted.length > 8) {
+            listEl.innerHTML += `<div class="dash-breakdown-more">其余 ${breakdownSorted.length - 8} 个专题已折叠（图例可滚动查看）</div>`;
+          }
+        }
+      }
+
+      window.addEventListener("resize", () => chart.resize());
+      window.addEventListener("resize", () => pie.resize());
+    })();
+  </script>
+{% endblock %}
+

@@ -1,0 +1,55 @@
+{% extends 'tasks/base.html' %}
+{% block title %}添加训练记录 - 英语四级专项{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1 class="h1">添加训练记录</h1>
+      <p class="muted">记录专项与训练时长，便于统计分析。</p>
+    </div>
+    <div class="actions">
+      <a class="btn btn-ghost" href="{% url 'tasks:cet4_list' %}">返回列表</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <form method="post" class="form">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="grid grid-2">
+        <div class="field">
+          <label class="label" for="{{ form.session_date.id_for_label }}">日期</label>
+          {{ form.session_date }}
+          {% if form.session_date.errors %}<div class="error">{{ form.session_date.errors }}</div>{% endif %}
+        </div>
+        <div class="field">
+          <label class="label" for="{{ form.category.id_for_label }}">专项</label>
+          {{ form.category }}
+          {% if form.category.errors %}<div class="error">{{ form.category.errors }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="field">
+          <label class="label" for="{{ form.minutes.id_for_label }}">训练时长（分钟）</label>
+          {{ form.minutes }}
+          {% if form.minutes.errors %}<div class="error">{{ form.minutes.errors }}</div>{% endif %}
+        </div>
+        <div class="field">
+          <label class="label" for="{{ form.remark.id_for_label }}">备注</label>
+          {{ form.remark }}
+          {% if form.remark.errors %}<div class="error">{{ form.remark.errors }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">保存</button>
+        <a class="btn" href="{% url 'tasks:cet4_list' %}">取消</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

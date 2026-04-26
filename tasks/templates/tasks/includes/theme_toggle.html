@@ -1,0 +1,11 @@
+<form class="theme-toggle" method="post" action="{% url 'tasks:set_theme' %}" title="切换界面明暗">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.path }}" />
+  {% if theme == "dark" %}
+    <input type="hidden" name="theme" value="light" />
+    <button type="submit" class="btn btn-ghost btn--theme" aria-label="切换为白天模式">☀️ 白天</button>
+  {% else %}
+    <input type="hidden" name="theme" value="dark" />
+    <button type="submit" class="btn btn-ghost btn--theme" aria-label="切换为夜间模式">🌙 夜间</button>
+  {% endif %}
+</form>

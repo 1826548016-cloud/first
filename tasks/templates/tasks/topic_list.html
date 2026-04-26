@@ -1,0 +1,95 @@
+{% extends 'tasks/base.html' %}
+{% block title %}专题管理 - 任务管理系统{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1 class="h1">专题管理</h1>
+    </div>
+    <div class="actions">
+      <a class="btn btn-ghost" href="{% url 'tasks:dashboard' %}">返回看板</a>
+    </div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card__title">创建新专题</div>
+      <form method="post" action="{% url 'tasks:topic_create' %}" class="form" style="padding-top:0;">
+        {% csrf_token %}
+        <div class="field">
+          <label class="label">名称</label>
+          {{ form.name }}
+          {% if form.name.errors %}<div class="hint" style="color:#c00;">{{ form.name.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="field" style="margin-top: 10px;">
+          <label class="label">合并到任务时间</label>
+          {{ form.merge_into_tasks }}
+        </div>
+        <div class="field field--actions" style="margin-top: 12px;">
+          <button type="submit" class="btn btn-primary">创建</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card__title">专题列表</div>
+      <div style="overflow-x:auto;">
+        <table class="table" style="width:100%;">
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>类型</th>
+              <th>统计</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in topics %}
+              <tr>
+                <td>
+                  <div class="title"><a class="link" href="{% url 'tasks:topic_checklist' t.id %}">{{ t.name }}</a></div>
+                </td>
+                <td>
+                  {% if t.is_builtin %}
+                    <span class="pill pill--muted">内置</span>
+                  {% else %}
+                    <span class="pill pill--accent">自定义</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if t.name == '任务' %}
+                    <span class="pill pill--muted">主统计</span>
+                  {% elif t.merge_into_tasks %}
+                    <span class="pill pill--ok">并入任务</span>
+                  {% else %}
+                    <span class="pill pill--muted">单独统计</span>
+                  {% endif %}
+                </td>
+                <td style="text-align:right;">
+                  <span class="topic-actions">
+                    <a class="btn btn-ghost btn--xs" href="{% url 'tasks:topic_checklist' t.id %}">进入</a>
+                    {% if t.name != '任务' %}
+                      <form method="post" action="{% url 'tasks:topic_toggle_merge' t.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button class="btn btn-ghost btn--xs" type="submit">{% if t.merge_into_tasks %}取消并入{% else %}并入任务{% endif %}</button>
+                      </form>
+                      {% if not t.is_builtin %}
+                        <form method="post" action="{% url 'tasks:topic_delete' t.id %}" style="display:inline;" onsubmit="return confirm('确定删除专题「{{ t.name }}」吗？其章节、条目与进度会一并删除。');">
+                          {% csrf_token %}
+                          <button class="btn btn-danger btn--xs" type="submit">删除</button>
+                        </form>
+                      {% endif %}
+                    {% endif %}
+                  </span>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4" class="muted">暂无专题</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+

@@ -1,0 +1,107 @@
+{% extends 'tasks/base.html' %}
+{% block title %}
+  {% if mode == 'create' %}添加任务{% else %}编辑任务{% endif %} - 任务管理系统
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1 class="h1">{% if mode == 'create' %}添加任务{% else %}编辑任务{% endif %}</h1>
+    </div>
+    <div class="actions">
+      <a class="btn btn-ghost" href="{% url 'tasks:list' %}">返回列表</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <form method="post" class="form">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="grid grid-2">
+        <div class="field">
+          <label class="label" for="{{ form.title.id_for_label }}">标题</label>
+          {{ form.title }}
+          {% if form.title.errors %}<div class="error">{{ form.title.errors }}</div>{% endif %}
+        </div>
+        <div class="field">
+          <label class="label" for="{{ form.status.id_for_label }}">状态</label>
+          {{ form.status }}
+          {% if form.status.errors %}<div class="error">{{ form.status.errors }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="{{ form.description.id_for_label }}">详情描述</label>
+        {{ form.description }}
+        {% if form.description.errors %}<div class="error">{{ form.description.errors }}</div>{% endif %}
+      </div>
+
+      <div class="grid grid-2">
+        <div class="field">
+          <label class="label" for="{{ form.time_accounting_basis.id_for_label }}">完成计时口径</label>
+          {{ form.time_accounting_basis }}
+          <div class="hint">仅在任务已完成时计入看板：可按截止时间当天或实际完成当天计入。</div>
+          {% if form.time_accounting_basis.errors %}<div class="error">{{ form.time_accounting_basis.errors }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="field">
+          <label class="label" for="{{ form.deadline_choice.id_for_label }}">截止时间</label>
+          {{ form.deadline_choice }}
+          <div class="hint">下拉框选择常用截止时间；如需精确到秒请选择「自定义」。</div>
+          {% if form.deadline_choice.errors %}<div class="error">{{ form.deadline_choice.errors }}</div>{% endif %}
+          <div class="field" id="deadline_custom_wrap" style="margin-top: 10px; display: none;">
+            <label class="label" for="{{ form.deadline_custom.id_for_label }}">自定义截止时间（精确到秒）</label>
+            {{ form.deadline_custom }}
+            <div class="hint">格式示例：2026-04-22 20:30:15</div>
+            {% if form.deadline_custom.errors %}<div class="error">{{ form.deadline_custom.errors }}</div>{% endif %}
+          </div>
+        </div>
+        <div class="field">
+          <label class="label" for="{{ form.remark.id_for_label }}">备注</label>
+          {{ form.remark }}
+          {% if form.remark.errors %}<div class="error">{{ form.remark.errors }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="{{ form.spent_minutes.id_for_label }}">本任务耗时（分钟）</label>
+        {{ form.spent_minutes }}
+        <div class="hint">可选。填写后，任务完成时会自动计入学习看板的「任务」时间统计。</div>
+        {% if form.spent_minutes.errors %}<div class="error">{{ form.spent_minutes.errors }}</div>{% endif %}
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">
+          {% if mode == 'create' %}保存{% else %}更新{% endif %}
+        </button>
+        <a class="btn" href="{% url 'tasks:list' %}">取消</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (function () {
+      const choice = document.getElementById("id_deadline_choice");
+      const wrap = document.getElementById("deadline_custom_wrap");
+      const custom = document.getElementById("id_deadline_custom");
+      if (!choice || !wrap || !custom) return;
+
+      function sync() {
+        const isCustom = choice.value === "__custom__";
+        wrap.style.display = isCustom ? "block" : "none";
+        custom.required = isCustom;
+      }
+
+      choice.addEventListener("change", sync);
+      sync();
+    })();
+  </script>
+{% endblock %}

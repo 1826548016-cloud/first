@@ -1,0 +1,50 @@
+{% extends 'tasks/base.html' %}
+{% block title %}英语四级专项 - 任务管理系统{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1 class="h1">英语四级专项</h1>
+      <p class="muted">记录听力 / 阅读 / 翻译 / 作文训练用时，并进行趋势统计。</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="{% url 'tasks:cet4_stats' %}">查看统计</a>
+      <a class="btn btn-primary" href="{% url 'tasks:cet4_create' %}">+ 添加训练记录</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width: 18%">日期</th>
+            <th style="width: 16%">专项</th>
+            <th style="width: 16%">时长（分钟）</th>
+            <th style="width: 36%">备注</th>
+            <th style="width: 14%">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sessions %}
+            <tr>
+              <td class="mono">{{ s.session_date|date:"Y-m-d" }}</td>
+              <td><span class="badge">{{ s.get_category_display }}</span></td>
+              <td class="mono">{{ s.minutes }}</td>
+              <td>{% if s.remark %}{{ s.remark }}{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td>
+                <div class="row-actions">
+                  <a class="link link-danger" href="{% url 'tasks:cet4_delete' s.id %}">删除</a>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="muted" style="padding: 18px;">暂无训练记录，点击右上角「添加训练记录」开始。</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

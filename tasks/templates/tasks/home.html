@@ -1,0 +1,56 @@
+{% extends 'tasks/portal_base.html' %}
+{% block title %}首页 · 日有所做{% endblock %}
+
+{% block content %}
+  <section class="home-hero">
+    <div class="container home-hero__inner">
+      <p class="home-hero__eyebrow">Personal dashboard</p>
+      <h1 class="home-hero__title">任务与学习进度，一屏掌控</h1>
+      <div class="home-hero__quicklinks">
+        <a class="home-chip" href="{% url 'tasks:list' %}">任务列表</a>
+        <a class="home-chip" href="{% url 'tasks:dashboard' %}">学习看板</a>
+        <a class="home-chip" href="{% url 'tasks:topic_list' %}">专题</a>
+      </div>
+
+      {% if not user.is_authenticated %}
+        <div class="home-hero__ctas">
+          <a class="btn btn-primary home-hero__cta" href="{% url 'tasks:login' %}?next=/">登录</a>
+          <a class="btn btn-ghost home-hero__cta" href="{% url 'tasks:register' %}?next=/">创建账户</a>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="home-zones">
+    <div class="container">
+      <div class="home-zone-block">
+        <h2 class="home-zones__title">日常任务</h2>
+        <div class="home-grid home-grid--daily">
+          {% for z in zones_daily %}
+            <a class="home-card" href="{{ z.href }}">
+              <span class="home-card__icon" aria-hidden="true">{{ z.icon }}</span>
+              <h3 class="home-card__title">{{ z.title }}</h3>
+              <p class="home-card__desc">{{ z.description }}</p>
+              <span class="home-card__cta">{{ z.cta }} →</span>
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="home-zone-block home-zone-block--exam">
+        <h2 class="home-zones__title home-zones__title--exam">专题学习</h2>
+        <div class="home-grid home-grid--exam">
+          <a class="home-card home-card--exam" href="{% url 'tasks:topic_list' %}">
+            <span class="home-card__icon" aria-hidden="true">📚</span>
+            <h3 class="home-card__title">专题区</h3>
+            <p class="home-card__desc">新增专题、章节与条目；支持勾选进度与备注；可设置是否并入任务时间。</p>
+            <span class="home-card__cta">进入专题 →</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </section>
+{% endblock %}
+
+{% block portal_footer_extra %}{% endblock %}

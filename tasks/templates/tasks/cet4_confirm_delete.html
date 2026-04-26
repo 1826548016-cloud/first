@@ -1,0 +1,31 @@
+{% extends 'tasks/base.html' %}
+{% block title %}删除训练记录 - 英语四级专项{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1 class="h1">删除训练记录</h1>
+      <p class="muted">删除后无法恢复，请确认。</p>
+    </div>
+    <div class="actions">
+      <a class="btn btn-ghost" href="{% url 'tasks:cet4_list' %}">返回列表</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="danger-box">
+      <div class="danger-title">你确定要删除这条训练记录吗？</div>
+      <div class="danger-body">
+        <div><span class="muted">日期：</span>{{ session.session_date|date:"Y-m-d" }}</div>
+        <div><span class="muted">专项：</span>{{ session.get_category_display }}</div>
+        <div><span class="muted">时长：</span>{{ session.minutes }} 分钟</div>
+      </div>
+    </div>
+
+    <form method="post" class="form-actions">
+      {% csrf_token %}
+      <button class="btn btn-danger" type="submit">确认删除</button>
+      <a class="btn" href="{% url 'tasks:cet4_list' %}">取消</a>
+    </form>
+  </div>
+{% endblock %}

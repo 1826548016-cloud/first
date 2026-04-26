@@ -1,0 +1,53 @@
+{% load static %}
+<!doctype html>
+<html lang="zh-CN" data-theme="{{ theme }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}任务管理系统{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'tasks/style.css' %}" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container topbar__inner">
+        <div class="brand">
+          <a class="brand__link" href="{% url 'tasks:home' %}">日有所做</a>
+        </div>
+        
+        <nav class="nav nav--grouped" aria-label="主导航">
+          <span class="nav__group">
+            {% with request.resolver_match.url_name as current %}
+              <a class="nav__link" href="{% url 'tasks:home' %}" {% if current == 'home' %}aria-current="page"{% endif %}>首页</a>
+              <a class="nav__link" href="{% url 'tasks:dashboard' %}" {% if current == 'dashboard' %}aria-current="page"{% endif %}>学习看板</a>
+              <a class="nav__link" href="{% url 'tasks:history' %}" {% if current == 'history' %}aria-current="page"{% endif %}>历史记录</a>
+              <a class="nav__link" href="{% url 'tasks:topic_list' %}" {% if current == 'topic_list' or current == 'topic_checklist' %}aria-current="page"{% endif %}>专题</a>
+              <a class="nav__link" href="{% url 'tasks:list' %}" {% if current == 'list' %}aria-current="page"{% endif %}>任务列表</a>
+              <a class="nav__link" href="{% url 'tasks:create' %}" {% if current == 'create' %}aria-current="page"{% endif %}>添加任务</a>
+            {% endwith %}
+          </span>
+          <span class="nav__divider" aria-hidden="true"></span>
+          <span class="nav__text nav__clock">北京时间 {{ beijing_now_text }} (GMT+8)</span>
+          {% if user.is_authenticated %}
+            <span class="nav__text">你好，{{ user.username }}</span>
+            <a class="nav__link" href="{% url 'tasks:logout' %}">退出</a>
+          {% else %}
+            <a class="nav__link" href="{% url 'tasks:login' %}">登录</a>
+            <a class="nav__link nav__link--subtle" href="{% url 'tasks:register' %}">注册</a>
+          {% endif %}
+          {% include "tasks/includes/theme_toggle.html" %}
+        </nav>
+      </div>
+      {% block topbar_slogan %}{% endblock %}
+    </header>
+
+    <main class="{% block main_class %}container{% endblock %}">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+      {% block footer_slogan %}{% endblock %}
+      <div class="container footer__inner"></div>
+    </footer>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

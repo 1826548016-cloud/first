@@ -1,0 +1,47 @@
+{% load static %}
+<!doctype html>
+<html lang="zh-CN" data-theme="{{ theme }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}日有所做{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'tasks/style.css' %}" />
+  </head>
+  <body class="portal-body">
+    <header class="portal-header">
+      <div class="container portal-header__inner">
+        <a class="portal-brand" href="{% url 'tasks:home' %}">日有所做</a>
+        <nav class="portal-nav portal-nav--grouped" aria-label="主导航">
+          <span class="portal-nav__group">
+            {% with request.resolver_match.url_name as current %}
+              <a class="portal-nav__link" href="{% url 'tasks:home' %}" {% if current == 'home' %}aria-current="page"{% endif %}>首页</a>
+            {% if user.is_authenticated %}
+              <a class="portal-nav__link" href="{% url 'tasks:list' %}" {% if current == 'list' %}aria-current="page"{% endif %}>任务区</a>
+              <a class="portal-nav__link" href="{% url 'tasks:dashboard' %}" {% if current == 'dashboard' %}aria-current="page"{% endif %}>看板</a>
+              <a class="portal-nav__link" href="{% url 'tasks:topic_list' %}" {% if current == 'topic_list' or current == 'topic_checklist' %}aria-current="page"{% endif %}>专题</a>
+            {% endif %}
+            {% endwith %}
+          </span>
+          <span class="portal-nav__divider" aria-hidden="true"></span>
+          {% if user.is_authenticated %}
+            <span class="portal-nav__user">{{ user.username }}</span>
+            <a class="portal-nav__link portal-nav__link--ghost" href="{% url 'tasks:logout' %}">退出</a>
+          {% else %}
+            <a class="portal-nav__link portal-nav__link--accent" href="{% url 'tasks:login' %}">登录</a>
+            <a class="portal-nav__link portal-nav__link--ghost" href="{% url 'tasks:register' %}">注册</a>
+          {% endif %}
+          {% include "tasks/includes/theme_toggle.html" %}
+        </nav>
+      </div>
+    </header>
+
+    <main class="portal-main">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="portal-footer">
+      <div class="container portal-footer__inner">{% block portal_footer_extra %}{% endblock %}</div>
+    </footer>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

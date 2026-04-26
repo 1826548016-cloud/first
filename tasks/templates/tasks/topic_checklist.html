@@ -1,0 +1,232 @@
+{% extends 'tasks/base.html' %}
+{% block title %}专题清单 - {{ topic.name }}{% endblock %}
+
+{% block topbar_slogan %}{% endblock %}
+{% block footer_slogan %}{% endblock %}
+
+{% block content %}
+  {% if messages %}
+    <div style="padding-top: 12px;">
+      {% for message in messages %}
+        <div class="alert {% if message.tags == 'success' %}exam408-msg exam408-msg--ok{% else %}alert-danger{% endif %}" style="margin-bottom:8px;">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="page-header">
+    <div>
+      <h1 class="h1">专题清单 · {{ topic.name }}</h1>
+    </div>
+    <div class="actions">
+      <a class="btn btn-ghost" href="{% url 'tasks:topic_list' %}">返回专题</a>
+      <a class="btn btn-ghost" href="{% url 'tasks:dashboard' %}">学习看板</a>
+    </div>
+  </div>
+
+  <div class="card exam408-progress-card">
+    <div class="exam408-progress-card__inner">
+      <div class="exam408-progress-head">
+        <span class="exam408-progress-title">总进度</span>
+        <span class="exam408-progress-meta mono" data-topic-overall-text>{{ stats.overall.done }}/{{ stats.overall.total }}（{{ stats.overall.pct }}%）</span>
+      </div>
+      <div class="exam408-bar exam408-bar--lg" aria-hidden="true">
+        <span class="exam408-bar__fill exam408-bar__fill--overall" data-topic-overall-pct style="width: {{ stats.overall.pct }}%;"></span>
+      </div>
+    </div>
+  </div>
+
+  {% for sec in sections %}
+    <div class="card exam408-pillar">
+      <div class="exam408-pillar__head">
+        <h2 class="exam408-pillar__title">{{ sec.module.name }}</h2>
+      </div>
+      <div class="exam408-pillar__body">
+        <details class="exam408-note-details" style="margin-bottom: 10px;">
+          <summary class="exam408-note-details__summary">{% if sec.module.note %}编辑章节备注{% else %}添加章节备注{% endif %}</summary>
+          <form method="post" action="{% url 'tasks:topic_module_note' sec.module.id %}">
+            {% csrf_token %}
+            <textarea class="input exam408-note-details__textarea" rows="3" name="note" placeholder="这一章的要点、错题、参考页码…">{{ sec.module.note }}</textarea>
+            <div class="exam408-note-details__actions">
+              <button type="submit" class="btn btn-primary btn--xs">保存章节备注</button>
+            </div>
+          </form>
+        </details>
+
+        <ul class="exam408-list">
+          {% for row in sec.items %}
+            <li class="exam408-list__row" data-item-row="{{ row.id }}">
+              <div class="exam408-list__col-main">
+                <label class="exam408-check">
+                  <input
+                    type="checkbox"
+                    class="exam408-check__input"
+                    data-item-id="{{ row.id }}"
+                    {% if row.done %}checked{% endif %}
+                  />
+                  <span class="exam408-check__text">{{ row.label }}</span>
+                </label>
+                {% if row.note %}
+                  <div class="exam408-note-preview">{{ row.note|truncatechars:72 }}</div>
+                {% endif %}
+                <details class="exam408-note-details">
+                  <summary class="exam408-note-details__summary">{% if row.note %}编辑条目备注{% else %}添加条目备注{% endif %}</summary>
+                  <textarea
+                    class="input exam408-note-details__textarea"
+                    rows="3"
+                    data-note-for="{{ row.id }}"
+                    placeholder="易错点、自己的理解、参考书页码…"
+                  >{{ row.note }}</textarea>
+                  <div class="exam408-note-details__actions">
+                    <button type="button" class="btn btn-primary btn--xs" data-save-note="{{ row.id }}">保存备注</button>
+                    <span class="exam408-note-hint" data-note-saved="{{ row.id }}" hidden>已保存</span>
+                  </div>
+                </details>
+              </div>
+              {% if row.can_delete %}
+                <form method="post" action="{% url 'tasks:topic_item_delete' row.id %}" class="exam408-del-form" onsubmit="return confirm('确定删除这条自定义条目？');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-danger btn--xs">删除</button>
+                </form>
+              {% endif %}
+            </li>
+          {% empty %}
+            <li class="muted" style="padding: 10px 0;">暂无条目</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  {% endfor %}
+
+  <div class="card card--inset" style="margin-top: 14px;">
+    <div class="card__title">新增条目 / 新增章节</div>
+    <form method="post" action="{% url 'tasks:topic_item_add' topic.id %}" style="padding: 14px 16px;">
+      {% csrf_token %}
+      <div class="grid grid-3" style="align-items: end;">
+        <div class="field">
+          <label class="label">选择已有章节</label>
+          {{ add_form.module }}
+        </div>
+        <div class="field">
+          <label class="label">或新建章节</label>
+          {{ add_form.new_module }}
+        </div>
+        <div class="field">
+          <label class="label">条目内容</label>
+          {{ add_form.label }}
+        </div>
+      </div>
+      {% if add_form.non_field_errors %}
+        <div class="alert alert-danger" style="margin-top:10px;">{{ add_form.non_field_errors }}</div>
+      {% endif %}
+      <div class="field field--actions" style="margin-top: 10px;">
+        <button type="submit" class="btn btn-primary">添加</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (function () {
+      const toggleUrl = "{% url 'tasks:topic_toggle' %}";
+      const noteUrl = "{% url 'tasks:topic_save_note' %}";
+
+      function getCookie(name) {
+        const v = document.cookie.match("(^|;) ?" + name + "=([^;]*)(;|$)");
+        return v ? decodeURIComponent(v[2]) : "";
+      }
+
+      function recomputeOverall() {
+        const boxes = document.querySelectorAll(".exam408-check__input[data-item-id]");
+        let tot = boxes.length;
+        let done = 0;
+        boxes.forEach((b) => { if (b.checked) done += 1; });
+        const pct = tot ? Math.round((1000 * done) / tot) / 10 : 0;
+        const ot = document.querySelector("[data-topic-overall-text]");
+        const of = document.querySelector("[data-topic-overall-pct]");
+        if (ot) ot.textContent = done + "/" + tot + "（" + pct + "%）";
+        if (of) of.style.width = pct + "%";
+      }
+
+      recomputeOverall();
+
+      document.querySelectorAll(".exam408-check__input[data-item-id]").forEach(function (cb) {
+        cb.addEventListener("change", async function () {
+          const intended = cb.checked;
+          const csrftoken = getCookie("csrftoken");
+          try {
+            const resp = await fetch(toggleUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+              body: JSON.stringify({ item_id: parseInt(cb.dataset.itemId, 10) }),
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data && data.error ? data.error : "bad status");
+            if (typeof data.done === "boolean") cb.checked = data.done;
+            recomputeOverall();
+          } catch (e) {
+            cb.checked = !intended;
+            alert("保存失败，请检查网络或刷新页面后重试。");
+          }
+        });
+      });
+
+      function syncNotePreview(rowId, text) {
+        const row = document.querySelector('[data-item-row="' + rowId + '"]');
+        if (!row) return;
+        const main = row.querySelector(".exam408-list__col-main");
+        const details = row.querySelector(".exam408-note-details");
+        if (!main || !details) return;
+        let prev = row.querySelector(".exam408-note-preview");
+        if (!text) {
+          if (prev) prev.remove();
+          const sum = details.querySelector(".exam408-note-details__summary");
+          if (sum) sum.textContent = "添加条目备注";
+          return;
+        }
+        var short = text.length > 72 ? text.slice(0, 72) + "…" : text;
+        if (!prev) {
+          prev = document.createElement("div");
+          prev.className = "exam408-note-preview";
+          main.insertBefore(prev, details);
+        }
+        prev.textContent = short;
+        const sum = details.querySelector(".exam408-note-details__summary");
+        if (sum) sum.textContent = "编辑条目备注";
+      }
+
+      document.querySelectorAll("[data-save-note]").forEach(function (btn) {
+        btn.addEventListener("click", async function () {
+          const id = btn.getAttribute("data-save-note");
+          const ta = document.querySelector('textarea[data-note-for="' + id + '"]');
+          const hint = document.querySelector('[data-note-saved="' + id + '"]');
+          if (!ta) return;
+          const csrftoken = getCookie("csrftoken");
+          btn.disabled = true;
+          try {
+            const resp = await fetch(noteUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+              body: JSON.stringify({ item_id: parseInt(id, 10), note: ta.value }),
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+              alert(data.error || "保存失败");
+              return;
+            }
+            syncNotePreview(id, data.note || "");
+            if (hint) {
+              hint.hidden = false;
+              setTimeout(function () { hint.hidden = true; }, 1600);
+            }
+          } catch (e) {
+            alert("保存失败，请检查网络或刷新页面后重试。");
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
+    })();
+  </script>
+{% endblock %}
+
